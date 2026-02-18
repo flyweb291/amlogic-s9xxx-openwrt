@@ -2732,7 +2732,7 @@ CONFIG_PACKAGE_kmod-batman-adv=y
 # CONFIG_PACKAGE_kmod-geneve is not set
 # CONFIG_PACKAGE_kmod-gre is not set
 # CONFIG_PACKAGE_kmod-gre6 is not set
-# CONFIG_PACKAGE_kmod-inet-diag is not set
+CONFIG_PACKAGE_kmod-inet-diag=y
 # CONFIG_PACKAGE_kmod-inet-mptcp-diag is not set
 # CONFIG_PACKAGE_kmod-ip6-tunnel is not set
 CONFIG_PACKAGE_kmod-ipip=y
@@ -4605,7 +4605,7 @@ CONFIG_PACKAGE_libblobmsg-json=y
 CONFIG_PACKAGE_libbpf=y
 # CONFIG_PACKAGE_libbsd is not set
 CONFIG_PACKAGE_libcap=y
-# CONFIG_PACKAGE_libcap-bin is not set
+CONFIG_PACKAGE_libcap-bin=y
 # CONFIG_PACKAGE_libcap-ng is not set
 # CONFIG_PACKAGE_libcares is not set
 # CONFIG_PACKAGE_libcbor is not set

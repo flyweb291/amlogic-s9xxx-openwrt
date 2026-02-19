@@ -62,6 +62,7 @@ CONFIG_PACKAGE_kmod-wireguard=y
 - ❌ **不创建自定义源**：不生成独立的 kmods 软件源
 - ⚠️ **替换内核风险**：如果替换为不同版本的内核，kmods 可能不匹配
 - ⚠️ **内核限制**：官方 ImageBuilder 只支持特定内核版本
+- ⭐ **新增选项**（2026-02）：可选择 `kernel_repo: "official"` 保留官方内核，确保完美匹配
 
 **ImageBuilder 特点**：
 ```bash
@@ -75,8 +76,8 @@ make image PACKAGES="base-files busybox kmod-usb-storage ..."
 **用户影响**：
 - ✅ 基于官方稳定版本
 - ✅ 所选模块已内置且与初始内核匹配
-- ⚠️ **如果不替换内核**：完美匹配，无问题
-- ⚠️ **如果替换内核**：kmods 可能与新内核不匹配
+- ⚠️ **如果不替换内核**（`kernel_repo: "official"`）：完美匹配，无问题（仅提供 rootfs.tar.gz）
+- ⚠️ **如果替换内核**（`kernel_repo: "ophub/kernel"`）：kmods 可能与新内核不匹配（提供设备镜像）
 - ℹ️ **详细说明**：参见 [IMAGEBUILDER_KMODS_MATCHING_EXPLAINED.md](./IMAGEBUILDER_KMODS_MATCHING_EXPLAINED.md)
 - ❌ 后期无法安装新模块（除非使用官方源，但需内核完全匹配）
 

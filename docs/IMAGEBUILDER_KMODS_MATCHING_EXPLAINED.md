@@ -168,17 +168,38 @@ ImageBuilder 工作流有两个功能：
 
 ### 建议 1：不替换内核（✅ 最安全）
 
+#### 方法 A：使用新增的 "official" 选项（推荐，自 2026-02 起可用）
+
+**配置**：
+```yaml
+releases_branch: "openwrt:24.10.5"
+kernel_repo: "official"    # ⭐ 新增：保留官方内核，不替换
+```
+
+**优点**：
+- ✅ ImageBuilder 使用官方内核（如 6.1.111）
+- ✅ 所有 kmods 与内核完全匹配
+- ✅ 无需担心内核模块加载问题
+- ✅ 最简单、最直观的配置
+
+**限制**：
+- ⚠️ 只生成 rootfs.tar.gz 文件（跳过设备特定镜像打包）
+- ℹ️ 如需设备镜像，需手动打包或使用方法 B
+
+#### 方法 B：使用传统配置（适用于需要设备镜像的情况）
+
 **配置**：
 ```yaml
 releases_branch: "openwrt:24.10.5"
 openwrt_kernel: "6.1.y"    # 与官方版本一致
 auto_kernel: false         # 关闭自动更新
+kernel_repo: "ophub/kernel"
 ```
 
 **结果**：
 - 使用官方 ImageBuilder 的原始内核
 - kmods 完全匹配
-- 最稳定的配置
+- 生成完整的设备特定镜像（.img 文件）
 
 ### 建议 2：只在同系列内小幅更新
 

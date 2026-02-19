@@ -236,12 +236,13 @@ on:
         default: true
         type: boolean
       kernel_repo:
-        description: "Set the kernel repository"
+        description: "Set the kernel repository (select 'official' to keep ImageBuilder's official kernel without replacement)"
         required: false
         default: "ophub/kernel"
         type: choice
         options:
           - ophub/kernel
+          - official
       kernel_usage:
         description: "Set the tags of the stable kernel."
         required: false
@@ -349,8 +350,8 @@ jobs:
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Packaging OpenWrt
-        if: ${{ steps.imagebuilder.outputs.status == 'success' && !cancelled() }}
+      - name: Packaging OpenWrt with custom kernel
+        if: ${{ steps.imagebuilder.outputs.status == 'success' && inputs.kernel_repo != 'official' && !cancelled() }}
         uses: ophub/amlogic-s9xxx-openwrt@main
         with:
           openwrt_path: output/*rootfs.tar.gz
@@ -362,9 +363,9 @@ jobs:
           kernel_usage: ${{ inputs.kernel_usage }}
           builder_name: ${{ inputs.builder_name }}
 
-      - name: Upload the packaged OpenWrt
+      - name: Upload OpenWrt with custom kernel
         uses: ncipollo/release-action@main
-        if: ${{ env.PACKAGED_STATUS == 'success' && !cancelled() }}
+        if: ${{ env.PACKAGED_STATUS == 'success' && inputs.kernel_repo != 'official' && !cancelled() }}
         with:
           tag: ${{ env.build_tag }}
           artifacts: ${{ env.PACKAGED_OUTPUTPATH }}/*
@@ -385,3 +386,26 @@ jobs:
             ### Applicable platform
             - 🐧 `arm64`
             - 🐋 Docker image: https://hub.docker.com/u/ophub
+
+      - name: Note about official kernel selection
+        if: ${{ steps.imagebuilder.outputs.status == 'success' && inputs.kernel_repo == 'official' && !cancelled() }}
+        run: |
+          echo "============================================================"
+          echo "⚠️ IMPORTANT: 'official' kernel repository was selected"
+          echo "============================================================"
+          echo ""
+          echo "When you select 'official' as the kernel repository:"
+          echo "  ✅ The ImageBuilder's official kernel is preserved"
+          echo "  ✅ All kmods perfectly match the kernel (no version conflicts)"
+          echo "  ✅ The rootfs.tar.gz is available in the Release artifacts"
+          echo ""
+          echo "  ⚠️  Device-specific image packaging is SKIPPED"
+          echo "  ⚠️  You will need to manually create device images from rootfs.tar.gz"
+          echo ""
+          echo "If you need device-specific images (.img files):"
+          echo "  • Use 'ophub/kernel' repository option instead"
+          echo "  • OR manually package the rootfs using the ophub packaging tools"
+          echo ""
+          echo "The rootfs.tar.gz file has been uploaded to:"
+          echo "  Release Tag: ${{ env.build_tag }}"
+          echo "============================================================"

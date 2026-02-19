@@ -51,15 +51,17 @@ CONFIG_PACKAGE_kmod-wireguard=y
 1. 下载官方 ImageBuilder
 2. 使用 ImageBuilder 添加软件包
 3. 生成 rootfs.tar.gz
-4. 打包为设备镜像
+4. 【可选】替换内核版本
+5. 打包为设备镜像
 ```
 
 **关于 kmods**：
 - ✅ **使用官方 kmods**：从官方 openwrt.org 下载 kmod 包
-- ✅ **版本匹配**：与官方 ImageBuilder 内核版本匹配
+- ✅ **初始版本匹配**：ImageBuilder 构建时，内核与 kmods 完全匹配
 - ✅ **可扩展性**：理论上可以添加更多官方 kmod 包
 - ❌ **不创建自定义源**：不生成独立的 kmods 软件源
-- ⚠️ **内核限制**：只能使用官方支持的内核版本
+- ⚠️ **替换内核风险**：如果替换为不同版本的内核，kmods 可能不匹配
+- ⚠️ **内核限制**：官方 ImageBuilder 只支持特定内核版本
 
 **ImageBuilder 特点**：
 ```bash
@@ -72,9 +74,11 @@ make image PACKAGES="base-files busybox kmod-usb-storage ..."
 
 **用户影响**：
 - ✅ 基于官方稳定版本
-- ✅ 所选模块已内置
+- ✅ 所选模块已内置且与初始内核匹配
+- ⚠️ **如果不替换内核**：完美匹配，无问题
+- ⚠️ **如果替换内核**：kmods 可能与新内核不匹配
+- ℹ️ **详细说明**：参见 [IMAGEBUILDER_KMODS_MATCHING_EXPLAINED.md](./IMAGEBUILDER_KMODS_MATCHING_EXPLAINED.md)
 - ❌ 后期无法安装新模块（除非使用官方源，但需内核完全匹配）
-- ⚠️ 自编译内核后，官方 kmods 源不可用
 
 ---
 
@@ -137,12 +141,14 @@ make image PACKAGES="base-files busybox kmod-usb-storage ..."
 
 各工作流的主要目标是：
 
-| 工作流 | 主要目标 | 是否涉及内核模块编译 |
-|--------|---------|-------------------|
-| **system-image** | 完整编译 OpenWrt | ✅ 编译但内置 |
-| **imagebuilder** | 基于官方快速构建 | ⚠️ 使用官方 kmods |
-| **unifreq-scripts** | 重新打包已有 rootfs | ❌ 不涉及 |
-| **releases-files** | 复用 Release 文件 | ❌ 不涉及 |
+| 工作流 | 主要目标 | 是否涉及内核模块编译 | kmods与内核匹配性 |
+|--------|---------|-------------------|-----------------|
+| **system-image** | 完整编译 OpenWrt | ✅ 编译但内置 | ✅ 100% 匹配 |
+| **imagebuilder** | 基于官方快速构建 | ⚠️ 使用官方 kmods | ⚠️ 取决于是否替换内核* |
+| **unifreq-scripts** | 重新打包已有 rootfs | ❌ 不涉及 | ⚠️ 可能不匹配 |
+| **releases-files** | 复用 Release 文件 | ❌ 不涉及 | ⚠️ 可能不匹配 |
+
+\* ImageBuilder：不替换内核时完美匹配，替换内核后可能不匹配。详见 [IMAGEBUILDER_KMODS_MATCHING_EXPLAINED.md](./IMAGEBUILDER_KMODS_MATCHING_EXPLAINED.md)
 
 **没有一个工作流的目标是创建 kmods 软件源**
 

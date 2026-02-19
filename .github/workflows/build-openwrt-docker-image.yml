@@ -34,6 +34,9 @@ env:
   MAKE_DOCKER_SH: config/docker/make_docker_image.sh
   DOCKER_OUTPATH: out
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-24.04-arm

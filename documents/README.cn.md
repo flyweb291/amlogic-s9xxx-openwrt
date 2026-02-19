@@ -48,6 +48,7 @@ Github Actions 是 Microsoft 推出的一项服务，它提供了性能配置非
     - [10.2 认识 workflow 文件](#102-认识-workflow-文件)
       - [10.2.1 更换编译源码库的地址和分支](#1021-更换编译源码库的地址和分支)
       - [10.2.2 更改盒子的型号和内核版本号](#1022-更改盒子的型号和内核版本号)
+      - [10.2.3 仓库中各 GitHub Actions 的区别](#1023-仓库中各-github-actions-的区别)
     - [10.3 自定义 banner 信息](#103-自定义-banner-信息)
     - [10.4 自定义 feeds 配置文件](#104-自定义-feeds-配置文件)
     - [10.5 自定义 OpenWrt 默认配置文件](#105-自定义-openwrt-默认配置文件)
@@ -501,6 +502,20 @@ REPO_BRANCH: openwrt-21.02
 <img src=https://user-images.githubusercontent.com/68696949/181870674-1816aa21-ece4-4149-83ce-6ec7f95ece68.png width="700" />
 </div>
 
+#### 10.2.3 仓库中各 GitHub Actions 的区别
+
+| Workflow 文件 | 主要作用 | 适用场景 / 特点 |
+| --- | --- | --- |
+| build-openwrt-system-image.yml | 从源码完整编译并打包 OpenWrt 系统镜像 | 需要全量编译、深度自定义源码/feeds 时使用 |
+| build-openwrt-using-releases-files.yml | 复用已发布的 rootfs 压缩包重新打包镜像 | 省时复用现成 rootfs，主要调整内核或机型 |
+| build-openwrt-using-imagebuilder.yml | 使用官方/ImmortalWrt 发布的 ImageBuilder 组装固件 | 不编译源码，快速增删软件包生成镜像 |
+| build-openwrt-using-unifreq-scripts.yml | 使用 unifreq/openwrt_packit 脚本流程打包 | 贴近 flippy/unifreq 生态，兼容常见盒子脚本习惯 |
+| build-openwrt-docker-image.yml | 构建并推送 OpenWrt Docker 镜像到 Docker Hub | 需要容器化部署的场景 |
+| compile-kernel.yml | 单独编译内核/模块并产出 dtb/modules | 仅更新内核时使用，减少整固件重编 |
+| delete-older-releases-workflows.yml | 清理旧的 Releases / Tags / Workflow 运行记录 | 控制仓库体积，只保留最近若干产物 |
+
+> 触发方式：以上工作流均支持 `workflow_dispatch`（手动触发）和 `repository_dispatch`，且都包含 `github.event.repository.owner.id == github.event.sender.id` 判断，避免他人误触。
+
 ### 10.3 自定义 banner 信息
 
 默认的 [/etc/banner](../openwrt-files/common-files/etc/banner) 信息如下，你可以使用 [banner 生成器](https://www.bootschool.net/ascii) 定制专属自己的个性化 banner 信息（下面的样式为 `slant`）。使用 `10.5.2` 的方法可以在制作 OpenWrt 时添加自定义 banner 以及其他 OpenWrt 文件。
@@ -727,4 +742,3 @@ Utilities -> Compression -> bsdtar、pigz
              coreutils-tail、coreutils-timeout、coreutils-touch、coreutils-tr、coreutils-truncate)、
              gawk、getopt、jq、lm-sensors、losetup、pv、tar、uuidgen
 ```
-

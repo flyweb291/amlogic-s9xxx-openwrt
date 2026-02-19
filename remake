@@ -906,6 +906,30 @@ replace_kernel() {
     kernel_modules="${kernel_path}/${conf_kernel_tags}/${kernel}/modules-${kernel_name}.tar.gz"
     [[ -s "${kernel_boot}" && -s "${kernel_dtb}" && -s "${kernel_modules}" ]] || error_msg "The 3 kernel missing."
 
+    # Export kmod ipk packages for setting up local feeds
+    kmods_out_dir="${out_path}/kmods/${kernel_name}"
+    if tar -tf "${kernel_modules}" --wildcards --no-anchored '*.ipk' >/dev/null 2>&1; then
+        kmods_tmp_dir="$(mktemp -d)" || error_msg "Failed to create temporary directory for kmod extraction."
+        kmods_prev_exit_trap="$(trap -p EXIT)"
+        trap 'rm -rf "${kmods_tmp_dir}"' EXIT
+        if tar -mxzf "${kernel_modules}" -C "${kmods_tmp_dir}" --wildcards --no-anchored '*.ipk'; then
+            mkdir -p "${kmods_out_dir}"
+            find "${kmods_tmp_dir}" -type f -name '*.ipk' -exec cp -f {} "${kmods_out_dir}/" + || {
+                rm -rf "${kmods_tmp_dir}"
+                eval "${kmods_prev_exit_trap}"
+                error_msg "Failed to copy kmod ipk packages to [ ${kmods_out_dir} ]"
+            }
+        else
+            error_msg "Failed to extract kmod ipk packages from [ ${kernel_modules} ]"
+        fi
+        rm -rf "${kmods_tmp_dir}"
+        if [[ -n "${kmods_prev_exit_trap}" ]]; then
+            eval "${kmods_prev_exit_trap}"
+        else
+            trap - EXIT
+        fi
+    fi
+
     # 01. For /boot five files
     tar -mxzf ${kernel_boot} -C ${tag_bootfs}
     [[ "${PLATFORM}" == "allwinner" ]] && (cd ${tag_bootfs} && cp -f uInitrd-${kernel_name} uInitrd && cp -f vmlinuz-${kernel_name} Image)

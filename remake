@@ -910,14 +910,15 @@ replace_kernel() {
     kmods_out_dir="${out_path}/kmods/${kernel_name}"
     if tar -tf "${kernel_modules}" --wildcards --no-anchored '*.ipk' >/dev/null 2>&1; then
         kmods_tmp_dir="$(mktemp -d)" || error_msg "Failed to create temporary directory for kmod extraction."
+        trap 'rm -rf "${kmods_tmp_dir}"' RETURN EXIT
         if tar -mxzf "${kernel_modules}" -C "${kmods_tmp_dir}" --wildcards --no-anchored '*.ipk'; then
             mkdir -p "${kmods_out_dir}"
-            find "${kmods_tmp_dir}" -type f -name '*.ipk' -exec cp -f {} "${kmods_out_dir}/" \;
-            rm -rf "${kmods_tmp_dir}"
+            find "${kmods_tmp_dir}" -type f -name '*.ipk' -exec cp -f {} "${kmods_out_dir}/" +
         else
-            rm -rf "${kmods_tmp_dir}"
             error_msg "Failed to extract kmod ipk packages from [ ${kernel_modules} ]"
         fi
+        rm -rf "${kmods_tmp_dir}"
+        trap - RETURN EXIT
     fi
 
     # 01. For /boot five files

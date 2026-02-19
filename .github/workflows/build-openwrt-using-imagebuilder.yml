@@ -335,6 +335,14 @@ jobs:
           [[ -d "/builder/openwrt" ]] || mkdir -p /builder/openwrt
           ln -sf /builder/openwrt /home/runner/work/_actions/ophub/amlogic-s9xxx-openwrt/main/openwrt
           df -hT ${PWD}
+
+          # 设置 kmod 环境变量（如有收集到）
+          if [[ -d "output/kmods" ]] && find output/kmods -name 'kmod-*.ipk' -type f -print -quit | grep -q .; then
+              echo "kmod_build_tag=kmods_${RELEASES_BRANCH/:/_}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+              kmod_count=$(find output/kmods -name 'kmod-*.ipk' -type f | wc -l)
+              echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}
+          fi
+
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Upload OpenWrt to Release
@@ -342,12 +350,43 @@ jobs:
         if: ${{ steps.imagebuilder.outputs.status == 'success' && !cancelled() }}
         with:
           tag: ${{ env.build_tag }}
-          artifacts: output/*
+          artifacts: output/*.gz,output/config
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload kmod packages to Release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.imagebuilder.outputs.status == 'success' && env.kmod_count != '' && !cancelled() }}
+        with:
+          tag: ${{ env.kmod_build_tag }}
+          artifacts: output/kmods/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          makeLatest: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### OpenWrt kmod 软件包仓库 / kmod packages repository
+            - 来源版本 / Source: `${{ inputs.releases_branch }}`
+            - 内核版本 / Kernel: `${{ inputs.openwrt_kernel }}`
+            - 架构 / Architecture: `arm64`
+            - kmod 包数量 / kmod count: `${{ env.kmod_count }}`
+            ### 使用方法 / Usage
+            将所有 `.ipk` 文件及 `Packages` 索引文件下载到您的 HTTP 服务器同一目录，
+            然后在设备的 `/etc/opkg/customfeeds.conf` 中添加以下内容：
+            Download all `.ipk` files and `Packages` index to the same directory on your HTTP server,
+            then add to `/etc/opkg/customfeeds.conf` on your device:
+            ```
+            src/gz custom_kmods http://your-server/kmods
+            ```
+            之后执行 / Then run:
+            ```
+            opkg update
+            opkg install kmod-xxx
+            ```
 
       - name: Packaging OpenWrt
         if: ${{ steps.imagebuilder.outputs.status == 'success' && !cancelled() }}

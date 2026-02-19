@@ -388,7 +388,72 @@ jobs:
           echo "REPO_URL=${REPO_URL}" >> ${GITHUB_ENV}
           echo "REPO_NAME=${REPO_NAME}" >> ${GITHUB_ENV}
           echo "REPO_BRANCH=${REPO_BRANCH}" >> ${GITHUB_ENV}
+
+          # 从对应的 kmods_* Release 同步 kmod 软件包
+          kmod_tag_prefix="kmods_${{ inputs.source_branch }}_"
+          kmod_assets=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${{ github.repository }}/releases?per_page=20 | \
+              jq -r --arg KTK "${kmod_tag_prefix}" \
+              '[.[] | select(.tag_name | startswith($KTK))] |
+              sort_by(.created_at) | reverse | .[0] |
+              {tag: .tag_name, assets: [.assets[] | {url: .url, name: .name}]}')
+
+          if [[ -n "${kmod_assets}" && "${kmod_assets}" != "null" ]]; then
+              kmod_tag="$(echo ${kmod_assets} | jq -r '.tag')"
+              echo "kmod_build_tag=kmods_${{ inputs.source_branch }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+              mkdir -p openwrt/output/kmods
+              echo "${kmod_assets}" | jq -c '.assets[]' | while read asset; do
+                  asset_name="$(echo ${asset} | jq -r '.name')"
+                  asset_url="$(echo ${asset} | jq -r '.url')"
+                  echo "Downloading kmod asset: ${asset_name}"
+                  curl -fsSL \
+                      -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                      -H "Accept: application/octet-stream" \
+                      "${asset_url}" \
+                      -o "openwrt/output/kmods/${asset_name}" \
+                      || echo "警告：${asset_name} 下载失败，已跳过。"
+              done
+              kmod_count=$(find openwrt/output/kmods -name 'kmod-*.ipk' -type f | wc -l)
+              [[ "${kmod_count}" -gt "0" ]] && echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}
+              [[ "${kmod_count}" -gt "0" ]] && echo "已从 ${kmod_tag} 同步 ${kmod_count} 个 kmod 软件包" || echo "警告：未能成功下载任何 kmod 包。"
+          else
+              echo "未找到对应的 kmods Release（${kmod_tag_prefix}*），跳过 kmod 同步。"
+          fi
+
           echo "status=success" >> ${GITHUB_OUTPUT}
+
+      - name: Upload kmod packages to Release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.down.outputs.status == 'success' && env.kmod_count != '' && !cancelled() }}
+        with:
+          tag: ${{ env.kmod_build_tag }}
+          artifacts: openwrt/output/kmods/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          makeLatest: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### OpenWrt kmod 软件包仓库 / kmod packages repository
+            - 来源分支 / Source: `${{ inputs.source_branch }}`
+            - 内核版本 / Kernel: `${{ inputs.openwrt_kernel }}`
+            - 架构 / Architecture: `arm64`
+            - kmod 包数量 / kmod count: `${{ env.kmod_count }}`
+            ### 使用方法 / Usage
+            将所有 `.ipk` 文件及 `Packages` 索引文件下载到您的 HTTP 服务器同一目录，
+            然后在设备的 `/etc/opkg/customfeeds.conf` 中添加以下内容：
+            Download all `.ipk` files and `Packages` index to the same directory on your HTTP server,
+            then add to `/etc/opkg/customfeeds.conf` on your device:
+            ```
+            src/gz custom_kmods http://your-server/kmods
+            ```
+            之后执行 / Then run:
+            ```
+            opkg update
+            opkg install kmod-xxx
+            ```
 
       - name: Packaging OpenWrt
         if: ${{ steps.down.outputs.status == 'success' && !cancelled() }}

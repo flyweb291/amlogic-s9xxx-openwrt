@@ -449,6 +449,28 @@ jobs:
           [[ -d "output" ]] || mkdir output
           cp -f bin/targets/*/*/*rootfs.tar.gz output/
           cp -f .config output/config
+
+          # 收集 kmod 软件包用于自建 opkg 软件源
+          kmod_src="$(find bin/targets -mindepth 1 -type d -name 'packages' -quit 2>/dev/null)"
+          if [[ -n "${kmod_src}" ]]; then
+              kmod_files=("${kmod_src}"/kmod-*.ipk)
+              if [[ -f "${kmod_files[0]}" ]]; then
+                  mkdir -p output/kmods
+                  cp -f "${kmod_files[@]}" output/kmods/
+                  for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
+                      [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" output/kmods/
+                  done
+                  kmod_count=$(find output/kmods -name 'kmod-*.ipk' -type f | wc -l)
+                  echo "kmod_build_tag=kmods_${{ inputs.source_branch }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+                  echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}
+                  echo -e "已收集 ${kmod_count} 个 kmod 软件包，来源：${kmod_src}"
+              else
+                  echo "未找到 kmod-*.ipk 文件，跳过收集。"
+              fi
+          else
+              echo "未找到 packages 目录，跳过收集。"
+          fi
+
           ls -A | grep -vE '^(output|\.ccache)$' | xargs rm -rf || true
 
           # Set output information
@@ -466,6 +488,37 @@ jobs:
           replacesArtifacts: true
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload kmod packages to Release
+        uses: ncipollo/release-action@main
+        if: ${{ steps.clean.outputs.status == 'success' && env.kmod_count != '' && !cancelled() }}
+        with:
+          tag: ${{ env.kmod_build_tag }}
+          artifacts: openwrt/output/kmods/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
+          makeLatest: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### OpenWrt kmod 软件包仓库 / kmod packages repository
+            - 来源分支 / Source: `${{ inputs.source_branch }}`
+            - 内核版本 / Kernel: `${{ inputs.openwrt_kernel }}`
+            - 架构 / Architecture: `arm64`
+            - kmod 包数量 / kmod count: `${{ env.kmod_count }}`
+            ### 使用方法 / Usage
+            将所有 `.ipk` 文件及 `Packages` 索引文件下载到您的 HTTP 服务器同一目录，
+            然后在设备的 `/etc/opkg/customfeeds.conf` 中添加以下内容：
+            Download all `.ipk` files and `Packages` index to the same directory on your HTTP server,
+            then add to `/etc/opkg/customfeeds.conf` on your device:
+            ```
+            src/gz custom_kmods http://your-server/kmods
+            ```
+            之后执行 / Then run:
+            ```
+            opkg update
+            opkg install kmod-xxx
+            ```
 
       - name: Packaging OpenWrt
         if: ${{ steps.clean.outputs.status == 'success' && !cancelled() }}

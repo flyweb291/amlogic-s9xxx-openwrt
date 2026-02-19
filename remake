@@ -910,9 +910,13 @@ replace_kernel() {
     kmods_out_dir="${out_path}/kmods/${kernel_name}"
     if tar -tf "${kernel_modules}" 2>/dev/null | grep -q '\.ipk$'; then
         kmods_tmp_dir="$(mktemp -d)"
-        tar -mxzf "${kernel_modules}" -C "${kmods_tmp_dir}" --wildcards --no-anchored '*.ipk'
-        mkdir -p "${kmods_out_dir}"
-        find "${kmods_tmp_dir}" -type f -name '*.ipk' -exec cp -f {} "${kmods_out_dir}/" \;
+        if tar -mxzf "${kernel_modules}" -C "${kmods_tmp_dir}" --wildcards --no-anchored '*.ipk'; then
+            mkdir -p "${kmods_out_dir}"
+            find "${kmods_tmp_dir}" -type f -name '*.ipk' -exec cp -f {} "${kmods_out_dir}/" \;
+        else
+            rm -rf "${kmods_tmp_dir}"
+            error_msg "Failed to extract kmod ipk packages from [ ${kernel_modules} ]"
+        fi
         rm -rf "${kmods_tmp_dir}"
     fi
 

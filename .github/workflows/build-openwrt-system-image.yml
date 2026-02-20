@@ -459,7 +459,7 @@ jobs:
                   for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
                       [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" output/kmods/
                   done
-              done < <(printf '%s\n' "${kmod_files[@]}" | xargs -n1 dirname | sort -u)
+              done < <(for kmod_file in "${kmod_files[@]}"; do dirname "${kmod_file}"; done | sort -u)
               kmod_count=$(find output/kmods -name 'kmod-*.ipk' -type f | wc -l)
               echo "kmod_build_tag=kmods_${{ inputs.source_branch }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
               echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}

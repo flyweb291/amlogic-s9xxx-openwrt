@@ -272,7 +272,7 @@ custom_settings() {
             for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
                 [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" "${output_path}/kmods/"
             done
-        done < <(printf '%s\n' "${kmod_files[@]}" | xargs -n1 dirname | sort -u)
+        done < <(for kmod_file in "${kmod_files[@]}"; do dirname "${kmod_file}"; done | sort -u)
         echo -e "${INFO} 已收集 ${#kmod_files[@]} 个 kmod 软件包。"
     else
         echo -e "${INFO} 未找到 kmod-*.ipk 文件，跳过收集。"

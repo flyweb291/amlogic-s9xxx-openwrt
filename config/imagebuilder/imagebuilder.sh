@@ -268,11 +268,12 @@ custom_settings() {
     if [[ "${#kmod_files[@]}" -gt 0 ]]; then
         mkdir -p "${output_path}/kmods"
         cp -f "${kmod_files[@]}" "${output_path}/kmods/"
-        while read -r kmod_src; do
-            for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
-                [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" "${output_path}/kmods/"
-            done
-        done < <(for kmod_file in "${kmod_files[@]}"; do dirname "${kmod_file}"; done | sort -u)
+        if [[ -x "${imagebuilder_path}/scripts/ipkg-make-index.sh" ]]; then
+            "${imagebuilder_path}/scripts/ipkg-make-index.sh" "${output_path}/kmods" >"${output_path}/kmods/Packages"
+            gzip -9c "${output_path}/kmods/Packages" >"${output_path}/kmods/Packages.gz"
+        else
+            echo -e "${INFO} 未找到 ipkg-make-index.sh，跳过重新生成 Packages 索引。"
+        fi
         echo -e "${INFO} 已收集 ${#kmod_files[@]} 个 kmod 软件包。"
     else
         echo -e "${INFO} 未找到 kmod-*.ipk 文件，跳过收集。"

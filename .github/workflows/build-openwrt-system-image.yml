@@ -455,11 +455,12 @@ jobs:
           if [[ "${#kmod_files[@]}" -gt 0 ]]; then
               mkdir -p output/kmods
               cp -f "${kmod_files[@]}" output/kmods/
-              while read -r kmod_src; do
-                  for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
-                      [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" output/kmods/
-                  done
-              done < <(for kmod_file in "${kmod_files[@]}"; do dirname "${kmod_file}"; done | sort -u)
+              if [[ -x "./scripts/ipkg-make-index.sh" ]]; then
+                  ./scripts/ipkg-make-index.sh output/kmods > output/kmods/Packages
+                  gzip -9c output/kmods/Packages > output/kmods/Packages.gz
+              else
+                  echo "警告：未找到 ipkg-make-index.sh，跳过重新生成 Packages 索引。"
+              fi
               kmod_count=$(find output/kmods -name 'kmod-*.ipk' -type f | wc -l)
               echo "kmod_build_tag=kmods_${{ inputs.source_branch }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
               echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}

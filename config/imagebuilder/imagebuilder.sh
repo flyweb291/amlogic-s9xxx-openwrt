@@ -264,21 +264,17 @@ custom_settings() {
     fi
 
     # 收集 kmod 软件包用于自建 opkg 软件源
-    kmod_src="$(find ${imagebuilder_path}/bin/targets -mindepth 1 -type d -name 'packages' -quit 2>/dev/null)"
-    if [[ -n "${kmod_src}" ]]; then
-        kmod_files=("${kmod_src}"/kmod-*.ipk)
-        if [[ -f "${kmod_files[0]}" ]]; then
-            mkdir -p "${output_path}/kmods"
-            cp -f "${kmod_files[@]}" "${output_path}/kmods/"
-            for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
-                [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" "${output_path}/kmods/"
-            done
-            echo -e "${INFO} 已收集 ${#kmod_files[@]} 个 kmod 软件包，来源：${kmod_src}"
-        else
-            echo -e "${INFO} 未找到 kmod-*.ipk 文件，跳过收集。"
-        fi
+    mapfile -t kmod_files < <(find ${imagebuilder_path}/bin/targets ${imagebuilder_path}/bin/packages -type f -name 'kmod-*.ipk' 2>/dev/null)
+    if [[ "${#kmod_files[@]}" -gt 0 ]]; then
+        mkdir -p "${output_path}/kmods"
+        cp -f "${kmod_files[@]}" "${output_path}/kmods/"
+        kmod_src="$(dirname "${kmod_files[0]}")"
+        for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
+            [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" "${output_path}/kmods/"
+        done
+        echo -e "${INFO} 已收集 ${#kmod_files[@]} 个 kmod 软件包。"
     else
-        echo -e "${INFO} 未找到 packages 目录，跳过收集。"
+        echo -e "${INFO} 未找到 kmod-*.ipk 文件，跳过收集。"
     fi
 
     sync && sleep 3

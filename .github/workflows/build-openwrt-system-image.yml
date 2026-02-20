@@ -451,10 +451,11 @@ jobs:
           cp -f .config output/config
 
           # 收集 kmod 软件包用于自建 opkg 软件源
-          kmod_src="$(find bin/targets -mindepth 1 -type d -name 'packages' -quit 2>/dev/null)"
-          if [[ -n "${kmod_src}" ]]; then
-              kmod_files=("${kmod_src}"/kmod-*.ipk)
-              if [[ -f "${kmod_files[0]}" ]]; then
+          kmod_file="$(find "bin/targets" "bin/packages" -type f -name 'kmod-*.ipk' -print -quit 2>/dev/null)"
+          if [[ -n "${kmod_file}" ]]; then
+              kmod_src="$(dirname "${kmod_file}")"
+              mapfile -t kmod_files < <(find "${kmod_src}" -maxdepth 1 -type f -name 'kmod-*.ipk' 2>/dev/null)
+              if [[ "${#kmod_files[@]}" -gt 0 ]]; then
                   mkdir -p output/kmods
                   cp -f "${kmod_files[@]}" output/kmods/
                   for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
@@ -463,12 +464,12 @@ jobs:
                   kmod_count=$(find output/kmods -name 'kmod-*.ipk' -type f | wc -l)
                   echo "kmod_build_tag=kmods_${{ inputs.source_branch }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
                   echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}
-                  echo -e "已收集 ${kmod_count} 个 kmod 软件包，来源：${kmod_src}"
+                  echo -e "已收集 ${kmod_count} 个 kmod 软件包。"
               else
                   echo "未找到 kmod-*.ipk 文件，跳过收集。"
               fi
           else
-              echo "未找到 packages 目录，跳过收集。"
+              echo "未找到 kmod-*.ipk 文件，跳过收集。"
           fi
 
           ls -A | grep -vE '^(output|\.ccache)$' | xargs rm -rf || true

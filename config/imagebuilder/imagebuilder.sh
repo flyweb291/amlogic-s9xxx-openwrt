@@ -264,20 +264,17 @@ custom_settings() {
     fi
 
     # 收集 kmod 软件包用于自建 opkg 软件源
-    kmod_file="$(find "${imagebuilder_path}/bin/targets" "${imagebuilder_path}/bin/packages" -type f -name 'kmod-*.ipk' -print -quit 2>/dev/null)"
-    if [[ -n "${kmod_file}" ]]; then
-        kmod_src="$(dirname "${kmod_file}")"
-        mapfile -t kmod_files < <(find "${kmod_src}" -maxdepth 1 -type f -name 'kmod-*.ipk' 2>/dev/null)
-        if [[ "${#kmod_files[@]}" -gt 0 ]]; then
-            mkdir -p "${output_path}/kmods"
-            cp -f "${kmod_files[@]}" "${output_path}/kmods/"
-            for idx_file in Packages Packages.gz Packages.manifest Packages.sig; do
-                [[ -f "${kmod_src}/${idx_file}" ]] && cp -f "${kmod_src}/${idx_file}" "${output_path}/kmods/"
-            done
-            echo -e "${INFO} 已收集 ${#kmod_files[@]} 个 kmod 软件包。"
+    mapfile -t kmod_files < <(find "${imagebuilder_path}/bin/targets" "${imagebuilder_path}/bin/packages" -type f -name 'kmod-*.ipk' 2>/dev/null)
+    if [[ "${#kmod_files[@]}" -gt 0 ]]; then
+        mkdir -p "${output_path}/kmods"
+        cp -f "${kmod_files[@]}" "${output_path}/kmods/"
+        if [[ -x "${imagebuilder_path}/scripts/ipkg-make-index.sh" ]]; then
+            "${imagebuilder_path}/scripts/ipkg-make-index.sh" "${output_path}/kmods" >"${output_path}/kmods/Packages"
+            gzip -9c "${output_path}/kmods/Packages" >"${output_path}/kmods/Packages.gz"
         else
-            echo -e "${INFO} 未找到 kmod-*.ipk 文件，跳过收集。"
+            echo -e "${INFO} 未找到 ipkg-make-index.sh，跳过重新生成 Packages 索引。"
         fi
+        echo -e "${INFO} 已收集 ${#kmod_files[@]} 个 kmod 软件包。"
     else
         echo -e "${INFO} 未找到 kmod-*.ipk 文件，跳过收集。"
     fi

@@ -9,6 +9,7 @@
 # Add a feed source
 # sed -i '$a src-git lienol https://github.com/Lienol/openwrt-package' feeds.conf.default
 echo "src-git openclash https://github.com/vernesong/OpenClash" >> feeds.conf.default
+grep -q '^src-git istore https://github.com/linkease/istore;main$' feeds.conf.default || echo "src-git istore https://github.com/linkease/istore;main" >> feeds.conf.default
 
 # other
 # rm -rf package/utils/{ucode,fbtest}

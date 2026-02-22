@@ -223,8 +223,8 @@ jobs:
 
           echo "build_tag=OpenWrt_armv8_${{ inputs.openwrt_storage }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
 
-          # 从对应的 kmods_lede_* Release 同步 kmod 软件包
-          kmod_tag_prefix="kmods_lede_"
+          # 从对应的 kmods_system-image_lede_* Release 同步 kmod 软件包
+          kmod_tag_prefix="kmods_system-image_lede_"
           kmod_assets=$(curl -s \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -236,7 +236,7 @@ jobs:
 
           if [[ -n "${kmod_assets}" && "${kmod_assets}" != "null" ]]; then
               kmod_tag="$(echo ${kmod_assets} | jq -r '.tag')"
-              echo "kmod_build_tag=kmods_lede_master_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+              echo "kmod_build_tag=kmods_unifreq_lede_master_$(date +"%Y.%m")" >> ${GITHUB_ENV}
               mkdir -p ${armsr_tarfile_path}/kmods
               echo "${kmod_assets}" | jq -c '.assets[]' | while read asset; do
                   asset_name="$(echo ${asset} | jq -r '.name')"
@@ -250,6 +250,9 @@ jobs:
                       || echo "警告：${asset_name} 下载失败，已跳过。"
               done
               kmod_count=$(find ${armsr_tarfile_path}/kmods -name 'kmod-*.ipk' -type f | wc -l)
+              kmod_archive="opt/download/kmods_lede_master_unifreq.tar.gz"
+              tar -czf "${kmod_archive}" -C "${armsr_tarfile_path}" kmods
+              echo "kmod_archive=${kmod_archive}" >> ${GITHUB_ENV}
               [[ "${kmod_count}" -gt "0" ]] && echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}
               [[ "${kmod_count}" -gt "0" ]] && echo "已从 ${kmod_tag} 同步 ${kmod_count} 个 kmod 软件包" || echo "警告：未能成功下载任何 kmod 包。"
           else
@@ -263,7 +266,7 @@ jobs:
         if: ${{ steps.download.outputs.status == 'success' && env.kmod_count != '' && !cancelled() }}
         with:
           tag: ${{ env.kmod_build_tag }}
-          artifacts: opt/download/kmods/*
+          artifacts: opt/download/kmods/*,${{ env.kmod_archive }}
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true

@@ -338,7 +338,10 @@ jobs:
 
           # 设置 kmod 环境变量（如有收集到）
           if [[ -d "output/kmods" ]] && find output/kmods -name 'kmod-*.ipk' -type f -print -quit | grep -q .; then
-              echo "kmod_build_tag=kmods_${RELEASES_BRANCH/:/_}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+              kmod_archive="output/kmods_${RELEASES_BRANCH/:/_}_imagebuilder.tar.gz"
+              tar -czf "${kmod_archive}" -C output kmods
+              echo "kmod_build_tag=kmods_imagebuilder_${RELEASES_BRANCH/:/_}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+              echo "kmod_archive=${kmod_archive}" >> ${GITHUB_ENV}
               kmod_count=$(find output/kmods -name 'kmod-*.ipk' -type f | wc -l)
               echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}
           fi
@@ -362,7 +365,7 @@ jobs:
         if: ${{ steps.imagebuilder.outputs.status == 'success' && env.kmod_count != '' && !cancelled() }}
         with:
           tag: ${{ env.kmod_build_tag }}
-          artifacts: output/kmods/*
+          artifacts: output/kmods/*,${{ env.kmod_archive }}
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true

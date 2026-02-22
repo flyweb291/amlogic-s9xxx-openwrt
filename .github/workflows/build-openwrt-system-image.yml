@@ -462,7 +462,10 @@ jobs:
                   echo "警告：未找到 ipkg-make-index.sh，跳过重新生成 Packages 索引。"
               fi
               kmod_count=$(find output/kmods -name 'kmod-*.ipk' -type f | wc -l)
-              echo "kmod_build_tag=kmods_${{ inputs.source_branch }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+              kmod_archive="output/kmods_${{ inputs.source_branch }}_system-image.tar.gz"
+              tar -czf "${kmod_archive}" -C output kmods
+              echo "kmod_build_tag=kmods_system-image_${{ inputs.source_branch }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+              echo "kmod_archive=${kmod_archive}" >> ${GITHUB_ENV}
               echo "kmod_count=${kmod_count}" >> ${GITHUB_ENV}
               echo -e "已收集 ${kmod_count} 个 kmod 软件包。"
           else
@@ -492,7 +495,7 @@ jobs:
         if: ${{ steps.clean.outputs.status == 'success' && env.kmod_count != '' && !cancelled() }}
         with:
           tag: ${{ env.kmod_build_tag }}
-          artifacts: openwrt/output/kmods/*
+          artifacts: openwrt/output/kmods/*,openwrt/${{ env.kmod_archive }}
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true

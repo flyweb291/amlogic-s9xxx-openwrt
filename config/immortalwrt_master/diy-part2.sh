@@ -9,7 +9,7 @@
 # ------------------------------- Main source configuration -------------------------------
 #
 # Set the default LAN IP address
-default_ip="192.168.1.1"
+default_ip="192.168.101.210"
 ip_regex="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
 # Override default IP if a valid custom IP is provided as the first argument
 [[ -n "${1}" && "${1}" != "${default_ip}" && "${1}" =~ ${ip_regex} ]] && {
